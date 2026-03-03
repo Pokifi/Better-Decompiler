@@ -1,19 +1,27 @@
 local Pipeline = {}
-local Utils = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Utils.luau"))()
-local Cleaner = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Cleaner.luau"))()
-local Analyzer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Analyzer.luau"))()
-local Translator = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Translator.luau"))()
-local Renamer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Renamer.luau"))()
-local Optimizer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Optimizer.luau"))()
-local Formatter = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Formatter.luau"))()
-function Pipeline.Run(source)
-    local cleaned = Cleaner.Run(source)
-    local analysis = Analyzer.Scan(cleaned)
-    local translated = Translator.Run(cleaned)
-    local renamed = Renamer.Run(translated)
-    local optimized = Optimizer.Run(renamed)
-    local formatted = Formatter.Run(optimized)
-    return formatted, analysis
+local function loadModule(path)
+    local chunk = loadfile(path)
+    if not chunk then
+        error("Cannot load module: " .. path)
+    end
+    return chunk()
 end
-
+local Cleaner    = loadModule("Cleaner.luau")
+local Analyzer   = loadModule("Analyzer.luau")
+local Translator = loadModule("Translator.luau")
+local Renamer    = loadModule("Renamer.luau")
+local Optimizer  = loadModule("Optimizer.luau")
+local Formatter  = loadModule("Formatter.luau")
+function Pipeline.Run(source)
+    if type(source) ~= "string" then
+        error("Source must be a string")
+    end
+    source = Cleaner.Run(source)
+    local analysis = Analyzer.Scan(source)
+    source = Translator.Run(source)
+    source = Renamer.Run(source)
+    source = Optimizer.Run(source)
+    source = Formatter.Run(source)
+    return source, analysis
+end
 return Pipeline
