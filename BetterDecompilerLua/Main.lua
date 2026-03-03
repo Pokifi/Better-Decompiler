@@ -1,134 +1,164 @@
-local folderName = "BetterDecompiler"
-local versionRemoteUrl = "https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/version.txt"
-local baseUrl = "https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/"
+if getgenv().BetterDecompilerLoaded then
+    warn("BetterDecompiler already loaded.")
+    return
+end
+getgenv().BetterDecompilerLoaded = true
 
+local VERSION_LUAU = "https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/version.txt"
+local VERSION_LUA  = "https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompilerLua/version.txt"
+
+local BASE_LUAU = "https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/"
+local BASE_LUA  = "https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompilerLua/"
+
+local MODULES = {
+    "Utils","Cleaner","Analyzer","Translator",
+    "Renamer","Optimizer","Formatter","Pipeline","Tools"
+}
+
+local FOLDER = "BetterDecompiler"
 local LOG_LIMIT = 200
 
-local function folderExists()
-    return isfolder(folderName)
+local function supportsLuau()
+    return loadstring("local x: number = 5 return x") ~= nil
 end
 
-local function createFolder()
-    if not folderExists() then
-        makefolder(folderName)
-    end
-end
+local USE_LUAU = supportsLuau()
+local BASE = USE_LUAU and BASE_LUAU or BASE_LUA
+local VERSION_URL = USE_LUAU and VERSION_LUAU or VERSION_LUA
+local EXT = USE_LUAU and ".luau" or ".lua"
 
-local function downloadRemoteVersion()
-    local success, content = pcall(function()
-        return game:HttpGet(versionRemoteUrl)
-    end)
-    if success and content then
-        return content:match("%S+")
-    end
-    return "0.0.0"
-end
+print("BetterDecompiler Mode:", USE_LUAU and "LUAU" or "LUA")
 
-local function readLocalVersion()
-    local path = folderName .. "/version.txt"
-    if isfile(path) then
-        return readfile(path):match("%S+")
-    end
-    return "0.0.0"
-end
+local HAS_FS = (typeof(writefile)=="function" and typeof(makefolder)=="function" and typeof(isfile)=="function")
 
-local function writeLocalVersion(version)
-    writefile(folderName .. "/version.txt", version)
-end
-
-local function logToFile(level, message)
-    local path = folderName .. "/logs.txt"
-    createFolder()
-
-    local line = string.format("[%s] [%s] %s\n",
-        os.date("%Y-%m-%d %H:%M:%S"),
-        level,
-        message
-    )
-
-    if not isfile(path) then
-        writefile(path, line)
-        return
-    end
-
-    local content = readfile(path)
-    local lines = {}
-
-    for l in content:gmatch("[^\r\n]+") do
-        table.insert(lines, l)
-    end
-
-    table.insert(lines, line:gsub("\n", ""))
-
-    if #lines > LOG_LIMIT then
-        local newLines = {}
-        for i = #lines - LOG_LIMIT + 1, #lines do
-            table.insert(newLines, lines[i])
-        end
-        lines = newLines
-    end
-
-    writefile(path, table.concat(lines, "\n") .. "\n")
-end
-
-local function downloadFile(filename)
-    local url = baseUrl .. filename .. ".luau"
-
-    local success, content = pcall(function()
+local function safeHttpGet(url)
+    local ok,res = pcall(function()
         return game:HttpGet(url)
     end)
-
-    if success and content and #content > 10 then
-        writefile(folderName .. "/" .. filename .. ".luau", content)
-        return true
+    if ok and res and #res>10 then
+        return res
     end
-
-    logToFile("ERROR", "Failed to download " .. filename)
-    return false
+    return nil
 end
 
-local function reinstallAllModules()
-    logToFile("INFO", "Starting reinstall")
-    createFolder()
+local function loadMemory()
+    local Loaded = {}
 
-    local files = {
-        "Utils",
-        "Cleaner",
-        "Analyzer",
-        "Translator",
-        "Renamer",
-        "Optimizer",
-        "Formatter",
-        "Pipeline",
-        "Tools"
-    }
+    for _,name in ipairs(MODULES) do
+        local src = safeHttpGet(BASE..name..EXT)
+        if not src then
+            warn("Failed to download:",name)
+            continue
+        end
 
-    for _, file in ipairs(files) do
-        downloadFile(file)
+        local fn,err = loadstring(src)
+        if not fn then
+            warn("Compile error:",name,err)
+            continue
+        end
+
+        local ok,res = pcall(fn)
+        if ok then
+            Loaded[name]=res
+        else
+            warn("Runtime error:",name,res)
+        end
     end
 
-    local remoteVer = downloadRemoteVersion()
-    writeLocalVersion(remoteVer)
-
-    logToFile("INFO", "Reinstall completed - version " .. remoteVer)
-end
-
-if not getgenv().BetterDecompilerLoaded then
-    getgenv().BetterDecompilerLoaded = true
-    createFolder()
-    local remoteVersion = downloadRemoteVersion()
-    local localVersion = readLocalVersion()
-
-    if not folderExists() or remoteVersion ~= localVersion then
-        logToFile("WARN", "Version mismatch (" .. localVersion .. " vs " .. remoteVersion .. ") - reinstalling")
-        reinstallAllModules()
+    if Loaded.Tools and Loaded.Tools.Install then
+        Loaded.Tools.Install()
+        print("BetterDecompiler Loaded (Memory Mode)")
     else
-        logToFile("INFO", "Version match (" .. localVersion .. ")")
+        warn("Failed to initialize Tools")
     end
-    local Tools = loadfile(folderName .. "/Tools.luau")()
-    Tools.Install()
-    logToFile("INFO", "Better Decompiler loaded successfully")
-    print("Better Decompiler v" .. readLocalVersion() .. " ready")
+end
+
+local function installFS()
+    if not isfolder(FOLDER) then
+        makefolder(FOLDER)
+    end
+
+    local function path(f)
+        return FOLDER.."/"..f
+    end
+
+    local function readVersion()
+        if isfile(path("version.txt")) then
+            return readfile(path("version.txt")):match("%S+") or "0.0.0"
+        end
+        return "0.0.0"
+    end
+
+    local function writeVersion(v)
+        writefile(path("version.txt"),v)
+    end
+
+    local function log(msg)
+        local p = path("logs.txt")
+        local line = "["..os.date("%H:%M:%S").."] "..msg
+
+        if not isfile(p) then
+            writefile(p,line.."\n")
+            return
+        end
+
+        local content = readfile(p)
+        local lines = {}
+        for l in content:gmatch("[^\r\n]+") do
+            table.insert(lines,l)
+        end
+        table.insert(lines,line)
+
+        if #lines>LOG_LIMIT then
+            local new={}
+            for i=#lines-LOG_LIMIT+1,#lines do
+                table.insert(new,lines[i])
+            end
+            lines=new
+        end
+
+        writefile(p,table.concat(lines,"\n").."\n")
+    end
+
+    local remoteVersion = safeHttpGet(VERSION_URL)
+    remoteVersion = remoteVersion and remoteVersion:match("%S+") or "0.0.0"
+    local localVersion = readVersion()
+
+    if remoteVersion ~= localVersion then
+        log("Updating modules...")
+
+        for _,name in ipairs(MODULES) do
+            local src = safeHttpGet(BASE..name..EXT)
+            if src then
+                writefile(path(name..EXT),src)
+                log("Downloaded "..name)
+            else
+                log("Failed "..name)
+            end
+        end
+
+        writeVersion(remoteVersion)
+        log("Update complete "..remoteVersion)
+    else
+        log("Version OK "..localVersion)
+    end
+
+    local toolsPath = path("Tools"..EXT)
+    if isfile(toolsPath) then
+        local Tools = loadfile(toolsPath)()
+        if Tools and Tools.Install then
+            Tools.Install()
+            print("BetterDecompiler Loaded (Filesystem Mode)")
+        else
+            warn("Tools invalid")
+        end
+    else
+        warn("Tools not found")
+    end
+end
+
+if HAS_FS then
+    installFS()
 else
-    print("Better Decompiler already loaded.")
+    loadMemory()
 end
