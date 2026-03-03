@@ -1,5 +1,5 @@
 local Analyzer = {}
-local Utils = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Utils.luau"))()
+local Utils = loadfile("Utils.luau")()
 function Analyzer.Scan(source)
     local report = {
         tempVars = 0,
@@ -53,3 +53,4 @@ function Analyzer.CountKeywords(lines)
 end
 
 return Analyzer
+
