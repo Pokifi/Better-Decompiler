@@ -1,5 +1,5 @@
 local Formatter = {}
-local Utils = require(script.Parent.Utils)
+local Utils = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Utils.luau"))()
 function Formatter.Run(source)
     local lines = Utils.SplitLines(source)
     local indent = 0
@@ -42,4 +42,5 @@ end
 function Formatter.AddBlankBeforeLocal(source)
     return source:gsub("local%s+%w+%s*=", "\nlocal %1 =")
 end
+
 return Formatter
