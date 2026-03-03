@@ -1,10 +1,11 @@
 local Pipeline = {}
-local Cleaner = require(script.Parent.Cleaner)
-local Analyzer = require(script.Parent.Analyzer)
-local Translator = require(script.Parent.Translator)
-local Renamer = require(script.Parent.Renamer)
-local Optimizer = require(script.Parent.Optimizer)
-local Formatter = require(script.Parent.Formatter)
+local Utils = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Utils.luau"))()
+local Cleaner = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Cleaner.luau"))()
+local Analyzer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Analyzer.luau"))()
+local Translator = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Translator.luau"))()
+local Renamer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Renamer.luau"))()
+local Optimizer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Optimizer.luau"))()
+local Formatter = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Formatter.luau"))()
 function Pipeline.Run(source)
     local cleaned = Cleaner.Run(source)
     local analysis = Analyzer.Scan(cleaned)
@@ -14,4 +15,5 @@ function Pipeline.Run(source)
     local formatted = Formatter.Run(optimized)
     return formatted, analysis
 end
+
 return Pipeline
