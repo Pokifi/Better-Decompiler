@@ -1,5 +1,5 @@
 local Cleaner = {}
-local Utils = require(script.Parent.Utils)
+local Utils = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Utils.luau"))()
 local steps = {}
 function Cleaner.AddStep(fn)
     steps[#steps+1] = fn
@@ -182,4 +182,5 @@ end)
 Cleaner.AddStep(function(code)
     return code:gsub("helper%d+", "UtilityHelperFunction")
 end)
+
 return Cleaner
