@@ -1,5 +1,5 @@
 local Cleaner = {}
-local Utils = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Utils.luau"))()
+local Utils = loadfile("Utils.luau")()
 local steps = {}
 function Cleaner.AddStep(fn)
     steps[#steps+1] = fn
@@ -184,3 +184,4 @@ Cleaner.AddStep(function(code)
 end)
 
 return Cleaner
+
