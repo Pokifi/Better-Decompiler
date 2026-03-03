@@ -1,5 +1,5 @@
 local Formatter = {}
-local Utils = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pokifi/Better-Decompiler/refs/heads/main/BetterDecompiler/Utils.luau"))()
+local Utils = loadfile("Utils.luau")()
 function Formatter.Run(source)
     local lines = Utils.SplitLines(source)
     local indent = 0
@@ -44,3 +44,4 @@ function Formatter.AddBlankBeforeLocal(source)
 end
 
 return Formatter
+
